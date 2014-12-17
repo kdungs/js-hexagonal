@@ -2,9 +2,6 @@
 (function () {
   'use strict';
 
-  var canvas = document.getElementById('Hex'),
-      ctx = canvas.getContext('2d');
-
   var Vec2 = function (x, y) {
     this.x = x;
     this.y = y;
@@ -33,13 +30,14 @@
                         Vec2Math.scale(radius, Vec2Math.fromAngle(angle)));
   };
 
-  var Hex = function (center, radius, rotation) {
+  var Hex = function (center, radius, rotation, content) {
     this.center = center;
     this.radius = radius;
     this.rotation = Vec2Math.deg2rad((rotation || 0) % 60);
     this.width = 2 * this.radius * Math.cos(this.rotation);
     this.height =
         2 * this.radius * Math.sin(Vec2Math.deg2rad(60) + this.rotation);
+    this.content = content || '';
   };
 
   Hex.prototype.draw = function (ctx) {
@@ -52,10 +50,14 @@
       ctx.lineTo(p.x, p.y);
     }
     ctx.closePath();
-    // Just testing
-    ctx.fillStyle =
-        'hsla(' + Math.floor(Math.random() * 360) + ', 60%, 50%, 0.75)';
-    ctx.fill();
+    ctx.stroke();
+    if (this.content !== '') {
+      if (typeof this.contentWidth === 'undefined') {
+        this.contentWidth = ctx.measureText(this.content).width;
+      }
+      ctx.fillText(this.content, this.center.x - this.contentWidth / 2,
+                     this.center.y);
+    }
   };
 
   Hex.prototype.drawBounds = function (ctx) {
@@ -81,9 +83,10 @@
     this.hexes = [];
     for (var y = 0; y < ny; y+=1) {
       for (var x = 0; x < nx; x+=2) {
-        this.hexes.push(new Hex(new Vec2(x * 0.75 * sx, y * sy), radius, 60));
-        this.hexes.push(
-            new Hex(new Vec2((x + 1) * 0.75 * sx, y * sy + sy / 2), radius, 60));
+        this.hexes.push(new Hex(new Vec2(x * 0.75 * sx, y * sy), radius, 60,
+                        '(' + x + ',' + y + ')'));
+        this.hexes.push(new Hex(new Vec2((x + 1) * 0.75 * sx, y * sy + sy / 2),
+                                radius, 60, '(' + (x + 1) + ',' + y + ')'));
       }
     }
   };
@@ -97,31 +100,20 @@
     ctx.lineWidth = lineWidth;
   };
 
-  var drawGrid = function (ctx, spacing) {
-    var s = spacing || 10;
-    var nx = canvas.width / s,
-        ny = canvas.height / s;
-    ctx.beginPath();
-    for (var i = 0; i < nx; i++) {
-      ctx.moveTo(i * s, 0);
-      ctx.lineTo(i * s, canvas.height);
-    }
-    for (var i = 0; i < ny; i++) {
-      ctx.moveTo(0, i * s);
-      ctx.lineTo(canvas.width, i * s);
-    }
-    ctx.lineWidth = 0.5;
-    ctx.strokeStyle = '#CCCCCC';
-    ctx.stroke();
+  var canvas = document.getElementById('Hex'),
+      ctx = canvas.getContext('2d');
 
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1.0;
+  var clear = function () {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
   };
 
-  drawGrid(ctx);
-
-  var hg = new HexGrid(30, 100, 100);
+  ctx.translate(100, 100);
+  var hg = new HexGrid(30, 10, 6);
   var drawFn = function () {
+    clear();
     hg.draw(ctx);
     window.setTimeout(function () {
       window.requestAnimationFrame(drawFn);
