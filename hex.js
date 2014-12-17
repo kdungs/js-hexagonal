@@ -121,5 +121,11 @@
   drawGrid(ctx);
 
   var hg = new HexGrid(30, 100, 100);
-  hg.draw(ctx);
+  var drawFn = function () {
+    hg.draw(ctx);
+    window.setTimeout(function () {
+      window.requestAnimationFrame(drawFn);
+    }, 10);
+  };
+  window.requestAnimationFrame(drawFn);
 }());
