@@ -51,7 +51,11 @@
                         this.rotation + Vec2Math.deg2rad(i * 60));
       ctx.lineTo(p.x, p.y);
     }
-    ctx.stroke();
+    ctx.closePath();
+    // Just testing
+    ctx.fillStyle =
+        'hsla(' + Math.floor(Math.random() * 360) + ', 60%, 50%, 0.75)';
+    ctx.fill();
   };
 
   Hex.prototype.drawBounds = function (ctx) {
@@ -68,6 +72,29 @@
 
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1.0;
+  };
+
+  var HexGrid = function (radius, nx, ny) {
+    this.seedHex = new Hex(new Vec2(0, 0), radius, 60);
+    var sx = this.seedHex.width,
+        sy = this.seedHex.height;
+    this.hexes = [];
+    for (var y = 0; y < ny; y+=1) {
+      for (var x = 0; x < nx; x+=2) {
+        this.hexes.push(new Hex(new Vec2(x * 0.75 * sx, y * sy), radius, 60));
+        this.hexes.push(
+            new Hex(new Vec2((x + 1) * 0.75 * sx, y * sy + sy / 2), radius, 60));
+      }
+    }
+  };
+
+  HexGrid.prototype.draw = function (ctx) {
+    var lineWidth = ctx.lineWidth;
+    ctx.lineWidth = 0.5;
+    this.hexes.forEach(function (hex) {
+      hex.draw(ctx);
+    });
+    ctx.lineWidth = lineWidth;
   };
 
   var drawGrid = function (ctx, spacing) {
@@ -93,15 +120,6 @@
 
   drawGrid(ctx);
 
-  var h1 = new Hex(new Vec2(100, 100), 100, 0);
-  h1.draw(ctx);
-  h1.drawBounds(ctx);
-  
-  var h2 = new Hex(new Vec2(300, 300), 100, 30);
-  h2.draw(ctx);
-  h2.drawBounds(ctx);
-
-  var h3 = new Hex(new Vec2(100, 300), 100, 15);
-  h3.draw(ctx);
-  h3.drawBounds(ctx);
+  var hg = new HexGrid(30, 100, 100);
+  hg.draw(ctx);
 }());
