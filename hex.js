@@ -38,6 +38,7 @@
     this.height =
         2 * this.radius * Math.sin(Vec2Math.deg2rad(60) + this.rotation);
     this.content = content || '';
+    this.fillColor = null;
   };
 
   Hex.prototype.draw = function (ctx) {
@@ -51,6 +52,12 @@
     }
     ctx.closePath();
     ctx.stroke();
+    if (this.fillColor) {
+      var c = ctx.fillStyle;
+      ctx.fillStyle = this.fillColor;
+      ctx.fill();
+      ctx.fillStyle = c;
+    }
     if (this.content !== '') {
       if (typeof this.contentWidth === 'undefined') {
         this.contentWidth = ctx.measureText(this.content).width;
@@ -77,16 +84,18 @@
   };
 
   var HexGrid = function (radius, nx, ny) {
+    this.radius = radius;
+    this.nx = nx;
+    this.ny = ny;
     this.seedHex = new Hex(new Vec2(0, 0), radius, 60);
     var sx = this.seedHex.width,
         sy = this.seedHex.height;
-    this.hexes = [];
-    for (var y = 0; y < ny; y+=1) {
-      for (var x = 0; x < nx; x+=2) {
-        this.hexes.push(new Hex(new Vec2(x * 0.75 * sx, y * sy), radius, 60,
-                        '(' + x + ',' + y + ')'));
-        this.hexes.push(new Hex(new Vec2((x + 1) * 0.75 * sx, y * sy + sy / 2),
-                                radius, 60, '(' + (x + 1) + ',' + y + ')'));
+    this.tiles = [];
+    for (var x = 0; x < nx; x++) {
+      var yoffset = (x % 2) * 0.5;
+      for (var y = 0; y < ny; y++) {
+        this.tiles.push(new Hex(new Vec2(x * 0.75 * sx, (y + yoffset) * sy),
+                                radius, 60, '(' + x + ',' + y + ')'));
       }
     }
   };
@@ -94,11 +103,42 @@
   HexGrid.prototype.draw = function (ctx) {
     var lineWidth = ctx.lineWidth;
     ctx.lineWidth = 0.5;
-    this.hexes.forEach(function (hex) {
+    this.tiles.forEach(function (hex) {
       hex.draw(ctx);
     });
     ctx.lineWidth = lineWidth;
   };
+
+  var HexDirections = {
+    N: 0,               // 000
+    S: 1,               // 001
+    NE: 2,              // 010
+    SE: 3,              // 011
+    NW: 4,              // 100
+    SW: 5,              // 101
+    MaskS: 1,           // 001
+    MaskE: 2,           // 010
+    MaskW: 4,           // 100
+    MaskHorizontal: 5,  // 110
+    move: function(v, dir) {
+      return Vec2Math.add(v, (function () {
+        switch (dir) {
+          case HexDirections.N:
+            return new Vec2(0, -1);
+          case HexDirections.S:
+            return new Vec2(0, +1);
+          case HexDirections.NE:
+            return new Vec2(+1, -!(v.x % 2));
+          case HexDirections.SE:
+            return new Vec2(+1, (v.x % 2));
+          case HexDirections.NW:
+            return new Vec2(-1, -!(v.x % 2));
+          case HexDirections.SW:
+            return new Vec2(-1, (v.x % 2));
+        }
+      }()));
+    }
+    };
 
   var canvas = document.getElementById('Hex'),
       ctx = canvas.getContext('2d');
@@ -110,8 +150,8 @@
     ctx.restore();
   };
 
-  ctx.translate(100, 100);
-  var hg = new HexGrid(30, 10, 6);
+  var hg = new HexGrid(30, 14, 9);
+  ctx.translate(hg.seedHex.width / 2, hg.seedHex.height / 2);
   var drawFn = function () {
     clear();
     hg.draw(ctx);
@@ -120,4 +160,45 @@
     }, 10);
   };
   window.requestAnimationFrame(drawFn);
+
+  var highlight = {
+    pos: new Vec2(4, 2),
+    tile: hg.tiles[4 * hg.ny + 2]
+  }
+  highlight.tile.fillColor = '#ffff80';
+  var setHighlight = function (v) {
+    v.x = v.x < 0 ? hg.nx - 1 : v.x % hg.nx;
+    v.y = v.y < 0 ? hg.ny - 1 : v.y % hg.ny;
+    highlight.tile.fillColor = null;
+    highlight.pos = v;
+    highlight.tile = hg.tiles[v.x * hg.ny + v.y];
+    highlight.tile.fillColor = '#ffff80';
+  };
+  var moveHighlight = function (dir) {
+    setHighlight(HexDirections.move(highlight.pos, dir));
+  };
+
+  window.addEventListener('keypress', function (evt) {
+    var which = evt.keyCode;
+    switch (which) {
+      case 113:  // q
+        moveHighlight(HexDirections.NW);
+        break;
+      case 119:  // w
+        moveHighlight(HexDirections.N);
+        break;
+      case 101:  // e
+        moveHighlight(HexDirections.NE);
+        break;
+      case 97:  // a
+        moveHighlight(HexDirections.SW);
+        break;
+      case 115:  // s
+        moveHighlight(HexDirections.S);
+        break;
+      case 100:  // d
+        moveHighlight(HexDirections.SE);
+        break;
+    };
+  });
 }());
