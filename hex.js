@@ -152,6 +152,8 @@
 
   var hg = new HexGrid(30, 14, 9);
   ctx.translate(hg.seedHex.width / 2, hg.seedHex.height / 2);
+  var gpR = 0,
+      gpPhi = 0;
   var drawFn = function () {
     clear();
     hg.draw(ctx);
@@ -201,4 +203,38 @@
         break;
     };
   });
+
+
+  var pollGP = function () {
+    var gp = navigator.getGamepads()[0],
+        axisEW = gp.axes[0],
+        axisNS = gp.axes[1],
+        dir = 0;
+    if (axisNS !== 0) {
+      var phi = Math.atan2(axisNS, axisEW),
+          r = Math.sqrt(axisEW * axisEW + axisNS * axisNS);
+      if (r > 0.1) {
+        if (phi > 0) {
+          dir |= HexDirections.MaskS;
+        }
+        if (Math.abs(phi) <= Math.PI / 6) {
+          dir |= HexDirections.MaskE;
+        } else if (Math.abs(phi) >= 3 * Math.PI / 6) {
+          dir |= HexDirections.MaskW;
+        }
+        moveHighlight(dir);
+      }
+    }
+  };
+
+  var checkGP = window.setInterval(function () {
+    console.log('checkGP');
+    if (navigator.getGamepads()[0]) {
+      document.getElementById('GamepadInfo').innerHTML =
+          'Control the highlight with your gamepad\'s joystick.';
+      window.setInterval(pollGP, 100);
+      window.clearInterval(checkGP);
+    }
+  }, 500);
+
 }());
